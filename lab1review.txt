@@ -1,0 +1,22 @@
+10 pts
+
+Summary:
+
+- The summary is sufficient and with good quality.
+
+
+\LaTeX:
+
+- Good usage of tables and items. Good job!
+
+- When using tables, try to keep the \hline inline with the \\ to save row
+  space.
+
+- When writing \LaTeX, try to keep every line of text within 80 characters or
+  100 at the most, then continue in a new line, \LaTeX will continue if you
+  break lines.
+
+
+- Dr. Rivas
+
+
