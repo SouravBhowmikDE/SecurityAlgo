@@ -13,10 +13,9 @@ import java.util.Scanner;
  */
 public class driver {
     public static void main(String args[]){
-        String inputKey= new String();
-        //Takes input from user and stores in inputkey
         Scanner in = new Scanner(System.in);
-        inputKey = in.nextLine();
+         //Takes input from user and stores in inputkey
+        String inputKey = in.nextLine();
         //If condition makes sure that user has entered exactly 32 hexadecimal digits
         if(inputKey.matches("[0-9A-F]{32}")){
             //Storing the W matrix from method aesRoundKeys in W
