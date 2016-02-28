@@ -1,0 +1,41 @@
+9 pts
+
+Correctness:
+
+- The program produces correct output.
+
+- The program produces output in the correct format.
+
+
+Style:
+
+- Correct indentation
+
+- Good block comments
+
+- Both files are missing the header. Remember: Each file must have a block
+  comment at the top which gives the name of the file, the student's name, the
+  assignment, the date, the version, and a comment about what is contained in
+  the file. For example:
+/**
+ * file: SinglyLinkedList.java
+ * author: student name
+ * course: CMPT 220
+ * assignment: project 1
+ * due date: August 30, 2003
+ * version: 1.3
+ * 
+ * This file contains the declaration of the SinglyLinkedList abstract data
+ * type.
+ */
+
+
+Efficiency and Other Comments:
+
+- The program was implemented as a package, this was not part of the
+  requirements. In the next programs avoid using packages, please.
+
+- The usage of HashMap may make your program less efficient.
+
+
+- Dr. Rivas
