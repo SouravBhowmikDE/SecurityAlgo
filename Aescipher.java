@@ -2,19 +2,25 @@ package AES;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-/* This class generates 11 round keys from an AES keys
+/* This class generates 11 round keys and a ciphertext from a given plaintext and an AES Encryption key
  *
  * @author Sourav
  */
 public class Aescipher {
   //Sbox stores the look up table S-Box 
   static Map<Integer, Integer> Sbox = new HashMap();
+  
+  //3D matrix that stores the 11 round keys in eleven 4*4 planes(2D arrays)
+  protected static Integer[][][] Keys= new Integer[11][4][4];
+  
+  //The fixed matrix used for column mixing
   static Integer[][] GaloisMatrix= {
                                     {0x02, 0x03, 0x01, 0x01},
                                     {0x01, 0x02, 0x03, 0x01},
                                     {0x01, 0x01, 0x02, 0x03},
                                     {0x03, 0x01, 0x01, 0x02}
                                    };
+  //Stores substitution box arrays
   static Integer[] SboxArray = {
     0x63, 0x7C, 0x77, 0x7B, 0xF2, 0x6B, 0x6F, 0xC5, 0x30, 0x01, 0x67, 0x2B, 0xFE, 0xD7, 0xAB, 0x76,
     0xCA, 0x82, 0xC9, 0x7D, 0xFA, 0x59, 0x47, 0xF0, 0xAD, 0xD4, 0xA2, 0xAF, 0x9C, 0xA4, 0x72, 0xC0,
@@ -33,6 +39,7 @@ public class Aescipher {
     0xE1, 0xF8, 0x98, 0x11, 0x69, 0xD9, 0x8E, 0x94, 0x9B, 0x1E, 0x87, 0xE9, 0xCE, 0x55, 0x28, 0xDF,
     0x8C, 0xA1, 0x89, 0x0D, 0xBF, 0xE6, 0x42, 0x68, 0x41, 0x99, 0x2D, 0x0F, 0xB0, 0x54, 0xBB, 0x16
   };
+  
   //Rcon stores the round constant look up table
   static Integer[] Rcon = {
     0x8d, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36, 0x6c, 0xd8, 0xab, 0x4d, 0x9a,
@@ -77,7 +84,7 @@ public class Aescipher {
    */
   protected static Integer[][] aesRoundKeys(String KeyHex) {
     //Ke stores the encryption key
-    Integer[][] Ke = new Integer[4][4];
+    Integer[][] Ke = StringToIntMatrix(KeyHex);
     
     //W stores 11 round keys
     Integer[][] W = new Integer[44][4];
@@ -85,21 +92,7 @@ public class Aescipher {
     for (int i = 0x00; i <= 0xff; i++) {
       Sbox.put(i, SboxArray[i]);
     }
-    //Inserting "," after every 2 hex digits for easier parsing
-    StringBuilder EncryptionKey = new StringBuilder();
-    EncryptionKey.append(KeyHex);
-    for (int i = 2; i < EncryptionKey.length(); i = i + 3) {
-      EncryptionKey.insert(i, ',');
-    }
-    //EncryptionKeyArr is an array of hexStrings
-    String[] EncryptionKeyArr = EncryptionKey.toString().split(",");
-    //Copying values from  EncryptionKeyArr array into Ke[4][4] matrix
-    int k = 0;
-    for (int i = 0; i < 4; i++) {
-      for (int j = 0; j < 4; j++) {
-        Ke[i][j] = Integer.parseInt(EncryptionKeyArr[k++], 16);
-      }
-    }
+ 
     //Filling up first 4 rows of W
     System.arraycopy(Ke, 0, W, 0, 4);
     //Operation on next 40 rows
@@ -125,6 +118,29 @@ public class Aescipher {
       }
     }
     return W;
+  }
+  /*
+  This function converts a String to a 4*4 Integer matrix
+  @param AnyString is the input String to be converted
+  @return the 4*4 matrix
+  */
+  protected static Integer[][] StringToIntMatrix(String AnyString){
+    Integer[][] Converted=new Integer[4][4];
+    StringBuilder ThatString = new StringBuilder();
+    ThatString.append(AnyString);
+    for (int i = 2; i < ThatString.length(); i = i + 3) {
+      ThatString.insert(i, ',');
+    }
+    //EncryptionKeyArr is an array of hexStrings
+    String[] EncryptionKeyArr = ThatString.toString().split(",");
+    //Copying values from  EncryptionKeyArr array into Ke[4][4] matrix
+    int k = 0;
+    for (int i = 0; i < 4; i++) {
+      for (int j = 0; j < 4; j++) {
+        Converted[i][j] = Integer.parseInt(EncryptionKeyArr[k++], 16);
+      }
+    }
+    return Converted;
   }
   /*
    * This function bitwise xors elements of two 1D matrices with 4 elements each
@@ -167,32 +183,46 @@ public class Aescipher {
     return outStateHex;
   }
   
-   /* This function substitutes each element of a 4*4 matrix using the AES S-box 
-  * @param inStateHex is the input matrix
-  * @return outStateHex is the substituted matrix
+   /* This function left shifts each element by their row number 
+  * @param inStateHex is the 4*4 input matrix
+  * @return outStateHex is the 4*4 shifted matrix
   */
   protected static Integer[][] aesShiftRow( Integer[][] inStateHex){
         Integer[][] outStateHex = new Integer[4][4];
         int counter=0;
          for (int i = 0; i < 4; i++) {
            for(int j=0;j<4;j++){
-             outStateHex[i][j] = inStateHex[i][(j+counter) % 4];
+             outStateHex[i][j] = inStateHex[i][(j+counter)%4];
            } 
            counter++;
         }
         return outStateHex;
   }
-  protected static Integer multiply2(Integer a){
+  
+  /*
+  This method multiplies a hex number by 2 and returns the result
+  @param a is the input to be multiplied by 2
+  @return the product
+  */
+  protected static Integer multiply2(Integer InputHex){
     StringBuilder ABinary= new StringBuilder(); 
-    String ABin;
-    ABin = Integer.toBinaryString(a);
-    int NumZero= 8-ABin.length();
-     ABinary.append(ABin);
+    String ABinString;
+    ABinString = Integer.toBinaryString(InputHex);
+    
+    //NumZero stores the no. of zeroes to pad with
+    int NumZero= 8-ABinString.length();
+     ABinary.append(ABinString);
+     
+     //Padding with zeroes now
     for(int i=0;i<NumZero;i++){
           ABinary.insert(0, '0');
     }
+    
+    //shiftedNum stores the number after it has been left shifted by 1 
     String shiftedNum = Integer.toHexString(Integer.parseInt((ABinary.substring(1)+ "0"), 2));
     Integer Snum= Integer.parseInt(shiftedNum, 16);
+    
+    //If the MSB of InputHex is 1, xor it with 1B
     if(NumZero==0){
       return ((Snum)^(0x1b));
     }
@@ -201,11 +231,20 @@ public class Aescipher {
   
   }
   
-  protected static Integer multiply3(Integer a){
-    return (multiply2(a)^a);
+   /*
+  This method multiplies a hex number by 3 and returns the result
+  @param InputHex is the input to be multiplied by 3
+  @return the product
+  */
+  protected static Integer multiply3(Integer InputHex){
+    return (multiply2(InputHex)^InputHex);
   }
   
-  
+  /*
+  This method uses GaloisMatrix to mix/multiply the columns of the 4*4 input matrix
+  @param inStateHex the input matrix
+  @return mixed/multiplied Matrix which is 4*4
+  */
   protected static Integer[][] aesMixColumn(Integer[][] inStateHex){
     Integer sum;
     Integer Product[][]= new Integer[4][4];
@@ -221,139 +260,83 @@ public class Aescipher {
                     case 0x03:sum=sum^multiply3(inStateHex[k][d]);
                               break;
                   }     
-               }
- 
-               Product[c][d] = sum;
-               
-            }
-         }
+        }
+        Product[c][d] = sum;
+      }
+    }
     return Product;
- 
   }
  
+  /*
+  This method returns the transpose of th input matrix
+  @param InputMatrix is the 4*4 matrix to be transposed
+  @return transposed 4*4 matrix
+  */
+  
+  
+  protected static Integer[][] transpose(Integer[][] InputMatrix){
+    Integer OutputMatrix[][]=new Integer[4][4];
+     for(int i=0;i<4;i++){
+       for(int j=0;j<4;j++){
+         OutputMatrix[i][j]=InputMatrix[j][i];
+       }
+     } 
+     return OutputMatrix;
+  }
+  
+  /*
+  This methods performs one full round of AES encryption
+  @param input is the intermediate AES result
+  @param RoundNum is the round number
+  @return the next intermediate AES result
+  */
+  protected static Integer[][] oneRound(Integer[][] input, int RoundNum){
+    Integer[][] a5, a6, a7, a8 = new Integer[4][4];
+    a5=aesNibbleSub(input);
+    a6=aesShiftRow(a5);
+     if(RoundNum!=10){
+       a7=aesMixColumn(a6);
+       a8=aesStateXOR(a7,transpose(Keys[RoundNum]));
+     }
+     else{
+       //No need for columnMix in the 10th round
+       a8=aesStateXOR(a6,transpose(Keys[RoundNum]));
+     }
+ return a8;
+  }
+  
+   /*
+  This function encrypts the plaintexr with the key to produce a ciphertext
+  @param pTextHex is the plaintext
+  @param keyHex is the key
+  @return the ciphertext in a 4*4 matrix
+  */
   protected static Integer[][] aes(String pTextHex, String keyHex){
     
     //Stores the ciphertext
     Integer[][] cTextHex= new Integer[4][4];
     
     //Stores plaintext in a 4*4 Integer matrix
-    Integer[][] Plaintext= new Integer[4][4];
+    Integer[][] Plaintext= StringToIntMatrix(pTextHex);
     
     //Stores the 11 round keys in a 44*4 matrix
     Integer[][] KeyArr= aesRoundKeys(keyHex); 
-    
-    //Stores round keys in a 3D array
-     Integer[][][] Keys= new Integer[11][4][4];
-    System.arraycopy(KeyArr, 0, Keys, 0, 176);
-    
-    //Inserting "," after every 2 hex digits for easier parsing
-    StringBuilder PText = new StringBuilder();
-    PText.append(pTextHex);
-    for (int i = 2; i < PText.length(); i = i + 3) {
-      PText.insert(i, ',');
-    }
-    //PTextArr is an array of hexStrings
-    String[] PTextArr = PText.toString().split(",");
-    //Copying values from  PTextArr array into Plaintext[4][4] matrix
-    int k = 0;
-    for (int i = 0; i < 4; i++) {
-      for (int j = 0; j < 4; j++) {
-        Plaintext[i][j] = Integer.parseInt(PTextArr[k++], 16);
-      }
-    }
-    
-    
-    Integer AddKey[][]= aesStateXOR(Plaintext, Keys[0]);
-   
-    
-    Integer[][] a1, a2, a3, a4 = new Integer[4][4];
-    
-    //1st 10 rounds
-    for(int i=1;i<10;i++){
-      a1=aesNibbleSub(AddKey);
-      a2= aesShiftRow(a1);
-      a3= aesMixColumn(a2);
-      a4= aesStateXOR(a3, Keys[i]);
-    }
-    
-    Integer[][] a5=aesNibbleSub(a4);
-    Integer[][] a6=aesShiftRow(a5);
-    cTextHex=aesStateXOR(a6, Keys[10]);
-    return cTextHex;
-  }
-  
-  public static void main(String args[]){
-    Integer[][] result= new Integer[4][4];
-        Integer[][] result1= new Integer[4][4];
-        Integer[][] a = {{0x63, 0xeb, 0x9f, 0xa0},
-                     { 0x2f, 0x93, 0x92, 0xc0},
-                     {0xaf, 0xc7, 0xab, 0x30},
-                      { 0xa2, 0x20, 0xcb, 0x2b}};
-        Integer[][] r1=aesMixColumn(a);
-        
-      //  System.out.println(String.format("%02X", multiply2(0x63)));
-        
-String ABinary; 
-    ABinary = Integer.toBinaryString(0x2d);
-    //System.out.println(ABinary);
-    
-    Integer[][] b={{0x00, 0x3c, 0x6e, 0x47}, 
-                    {0x1f, 0x4e, 0x22, 0x74},
-                    {0x0e, 0x08, 0x1b, 0x31},
-                   {0x54, 0x59, 0x0b, 0x1a}};
-   
-    /*Integer[][] c={{0x54, 0x4f, 0x4e, 0x20}, 
-                    {0x77, 0x6e, 0x69, 0x54},
-                    {0x6f, 0x65, 0x6e, 0x77},
-                    {0x20, 0x20, 0x65, 0x6f}};
-    
-    Integer[][] d={{0x54, 0x73, 0x20, 0x67}, {0x68, 0x20, 0x4b, 0x20}, {0x61, 0x6d, 0x75, 0x46}, {0x74, 0x79, 0x6e, 0x75}};
-    
-    Integer[][] result2= aesStateXOR(c, d);
-    
-    for (int i = 0; i < 4; i++) {
-        for (int j = 0; j < 4; j++) {
-         
-            System.out.print(String.format("%02X ", result2[i][j]));
-         
-        }
-       System.out.println("\n"); 
-      }
-    
-    for (int i = 0x00; i <= 0xff; i++) {
-      Sbox.put(i, SboxArray[i]);
-    }
-    result1=aesNibbleSub(b);
-    for (int i = 0; i < 4; i++) {
-        for (int j = 0; j < 4; j++) {
-         
-            System.out.print(String.format("%02X ", result1[i][j]));
-         
-        }
-       System.out.println("\n"); 
-      }
-    
-        //System.out.println(Arrays.toString(a));
-      */
-     for (int i = 0; i < 4; i++) {
-        for (int j = 0; j < 4; j++) {
-         
-            System.out.print(String.format("%02X ", r1[i][j]));
-         
-        }
-     //  System.out.println("\n"); 
-      }
-   
-    result=aesShiftRow(a);
-    //System.out.println(Arrays.toString(result));
-    for (int i = 0; i < 4; i++) {
-        for (int j = 0; j < 4; j++) {
-         
-         //   System.out.print(String.format("%02X ", result[i][j]));
-         
-        }
-    //   System.out.println("\n"); 
-      }
 
+    for(int k=0;k<11;k++){
+      for(int i=0;i<4;i++){
+        for(int j=0;j<4;j++){
+          Keys[k][i][j]=KeyArr[(4*k)+i][j];
+        }
+      }
+    }
+     //CTextRound stores 11 intermediate AES results in eleven 4*4 planes(2D arrays)
+    Integer[][][] CTextRound= new Integer[11][4][4];
+    CTextRound[0]=transpose(aesStateXOR(Plaintext, Keys[0]));
+    
+    //Round 1 to 10 is done here
+    for(int i=1;i<11;i++){
+      CTextRound[i]=oneRound(CTextRound[i-1], i);
+    }
+   return transpose(CTextRound[10]);
   }
 }
